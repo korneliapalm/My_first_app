@@ -46,7 +46,7 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
         if(degree > 345 || degree < 15){
             v.vibrate(100);
         }
-        
+
         tvHeading.setText("Riktning: " + Float.toString(degree) + " grader");
 
         // create a rotation animation (reverse turn degree degrees)
