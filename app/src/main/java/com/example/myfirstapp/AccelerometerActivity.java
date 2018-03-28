@@ -30,12 +30,9 @@ public class AccelerometerActivity extends AppCompatActivity implements SensorEv
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             xText.setText("" + sensorEvent.values[0]);
             yText.setText("" + sensorEvent.values[1]);
             zText.setText("" + sensorEvent.values[2]);
-        }
-
     }
 
     protected void onResume() {

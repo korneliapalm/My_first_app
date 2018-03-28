@@ -23,7 +23,8 @@ public class MainActivity extends AppCompatActivity {
 
     /** Called when the user taps the compass button */
     public void compassButton(View view){
-
+        Intent intent = new Intent(this, CompassActivity.class);
+        startActivity(intent);
     }
 
 
