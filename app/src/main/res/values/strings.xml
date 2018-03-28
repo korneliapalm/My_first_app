@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">My first app</string>
+    <string name="accelerometers">Accelerometers</string>
+    <string name="x_koordinat">X-koordinat</string>
+    <string name="y_koordinat">Y-koordinat</string>
+    <string name="z_koordinat">Z-koordinat</string>
+    <string name="accelerometer">Accelerometer</string>
+    <string name="kompass">Kompass</string>
 </resources>
