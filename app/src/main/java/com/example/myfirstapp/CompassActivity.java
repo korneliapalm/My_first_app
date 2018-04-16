@@ -10,8 +10,6 @@ import android.os.Vibrator;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -28,12 +26,7 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
     private float[] mLastMagnetometer = new float[3];
     private boolean mLastAccelerometerSet = false;
     private boolean mLastMagnetometerSet = false;
-
-    // record the compass picture angle turned
-    private float currentDegree = 0f;
-
     private Vibrator v;
-
     TextView tvHeading;
 
     @Override
@@ -102,11 +95,11 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
         mAzimuth = Math.round(mAzimuth);
         image.setRotation(-mAzimuth);
 
+
         if(mAzimuth > 345 || mAzimuth < 15){
-            v.vibrate(100);
+            v.vibrate(50);
         }
         tvHeading.setText("Riktning: " + Float.toString(mAzimuth) + " grader");
-
 
 
 
@@ -125,6 +118,7 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
     @Override
     protected void onPause() {
         super.onPause();
+        v.cancel();
         stop();
     }
 
@@ -132,10 +126,12 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
         if(haveSensor && haveSensor2){
             mSensorManager.unregisterListener(this,mAccelerometer);
             mSensorManager.unregisterListener(this,mMagnetometer);
+            v.cancel();
         }
         else{
             if(haveSensor)
                 mSensorManager.unregisterListener(this,mRotationV);
+                v.cancel();
         }
     }
 
