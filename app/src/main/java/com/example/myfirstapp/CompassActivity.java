@@ -1,11 +1,13 @@
 package com.example.myfirstapp;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Vibrator;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.animation.Animation;
@@ -14,14 +16,21 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 public class CompassActivity extends AppCompatActivity implements SensorEventListener {
-    // define the display assembly compass picture
+
     private ImageView image;
+    int mAzimuth;
+    private SensorManager mSensorManager;
+    private Sensor mRotationV, mAccelerometer, mMagnetometer;
+    boolean haveSensor = false, haveSensor2 = false;
+    float[] rMat = new float[9];
+    float[] orientation = new float[3];
+    private float[] mLastAccelerometer = new float[3];
+    private float[] mLastMagnetometer = new float[3];
+    private boolean mLastAccelerometerSet = false;
+    private boolean mLastMagnetometerSet = false;
 
     // record the compass picture angle turned
     private float currentDegree = 0f;
-
-    // device sensor manager
-    private SensorManager mSensorManager;
 
     private Vibrator v;
 
@@ -31,36 +40,74 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_compass);
+
         image = (ImageView) findViewById(R.id.imageViewCompass);
         tvHeading = (TextView) findViewById(R.id.tvHeading);
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         v = (Vibrator) this.getSystemService(Context.VIBRATOR_SERVICE);
 
+        start();
+    }
+
+    public void start() {
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) == null) {
+            if ((mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) == null) || (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) == null)) {
+                noSensorsAlert();
+            }
+            else {
+                mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                mMagnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+                haveSensor = mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+                haveSensor2 = mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_UI);
+            }
+        }
+        else{
+            mRotationV = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+            haveSensor = mSensorManager.registerListener(this, mRotationV, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    public void noSensorsAlert(){
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setMessage("Your device doesn't support the Compass.")
+                .setCancelable(false)
+                .setNegativeButton("Close",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        finish();
+                    }
+                });
+        alertDialog.show();
     }
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        // get the angle around the z-axis rotated
-        float degree = Math.round(sensorEvent.values[0]);
-
-        if(degree > 345 || degree < 15){
-            v.vibrate(100);
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
+            SensorManager.getRotationMatrixFromVector(rMat, sensorEvent.values);
+            mAzimuth = (int) (Math.toDegrees(SensorManager.getOrientation(rMat, orientation)[0]) + 360) % 360;
         }
 
-        tvHeading.setText("Riktning: " + Float.toString(degree) + " grader");
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(sensorEvent.values, 0, mLastAccelerometer, 0, sensorEvent.values.length);
+            mLastAccelerometerSet = true;
+        } else if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(sensorEvent.values, 0, mLastMagnetometer, 0, sensorEvent.values.length);
+            mLastMagnetometerSet = true;
+        }
+        if (mLastAccelerometerSet && mLastMagnetometerSet) {
+            SensorManager.getRotationMatrix(rMat, null, mLastAccelerometer, mLastMagnetometer);
+            SensorManager.getOrientation(rMat, orientation);
+            mAzimuth = (int) (Math.toDegrees(SensorManager.getOrientation(rMat, orientation)[0]) + 360) % 360;
+        }
 
-        // create a rotation animation (reverse turn degree degrees)
-        RotateAnimation ra = new RotateAnimation(currentDegree, -degree, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        mAzimuth = Math.round(mAzimuth);
+        image.setRotation(-mAzimuth);
 
-        // how long the animation will take place
-        ra.setDuration(210);
+        if(mAzimuth > 345 || mAzimuth < 15){
+            v.vibrate(100);
+        }
+        tvHeading.setText("Riktning: " + Float.toString(mAzimuth) + " grader");
 
-        // set the animation after the end of the reservation status
-        ra.setFillAfter(true);
 
-        // Start the animation
-        image.startAnimation(ra);
-        currentDegree = -degree;
 
 
     }
@@ -72,15 +119,24 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
 
     protected void onResume() {
         super.onResume();
-        // for the system's orientation sensor registered listeners
-        mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_GAME);
+       start();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        // to stop the listener and save battery
-        mSensorManager.unregisterListener(this);
+        stop();
+    }
+
+    public void stop() {
+        if(haveSensor && haveSensor2){
+            mSensorManager.unregisterListener(this,mAccelerometer);
+            mSensorManager.unregisterListener(this,mMagnetometer);
+        }
+        else{
+            if(haveSensor)
+                mSensorManager.unregisterListener(this,mRotationV);
+        }
     }
 
 
